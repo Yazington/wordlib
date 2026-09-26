@@ -7,6 +7,7 @@ import ./LAWS.bend as Laws
 import ./word.bend as W
 import ./nat.bend as N
 import ./ac.bend as A
+import ./mul.bend as MUL
 
 # Bool
 # ----
@@ -851,4 +852,88 @@ def Laws.u32_le_nat(a, b):
   match a b:
     case U32{+x} U32{+y}:
       %Laws.cmp_nat(32n, x, y) : {Cmp.is_le(Word.cmp(32n, x, y)) == Cmp.is_le(_) : Bool}
+      {==}
+
+# Multiplication
+# --------------
+
+def scale_mul(K: Bool, +P: Nat) -> {W.scale(K, P) == Nat.mul(W.b2n(K), P) : Nat}:
+  match K:
+    case False{}:
+      {==}
+    case True{}:
+      N.add_zero(P)
+
+def to_nat_zero(+n: Nat) -> {0n == Word.to_nat(n, Word.zero(n)) : Nat}:
+  match n:
+    case 0n:
+      {==}
+    case 1n++p:
+      %to_nat_zero(p) : {0n == Nat.double(_) : Nat}
+      {==}
+
+def Laws.mul_go_nat(n, m, a, b, acc):
+  match m:
+    case 0n:
+      {==}
+    case 1n++mp:
+      match a:
+        case WCon{False{}, +at}:
+          %MUL.mul_add_r_rev(W.mulq(n, mp, at, Word.shl(n, b), acc), Nat.mul(Word.to_nat(mp, at), W.b2n(W.top(n, False{}, b))), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), acc)), _) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %MUL.mul_assoc(Word.to_nat(mp, at), W.b2n(W.top(n, False{}, b)), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), acc)), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), acc), W.pow2(n)), _)) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %scale_mul(W.top(n, False{}, b), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), acc)), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), acc), W.pow2(n)), Nat.mul(Word.to_nat(mp, at), _))) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %A.ac([Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), acc)), Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), acc), W.pow2(n)), Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n)))], A.EAdd{A.EAdd{A.EAtom{0n}, A.EAtom{1n}}, A.EAtom{2n}}, A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EAtom{2n}}}, {==}) : {_ == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), acc)), Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), acc), W.pow2(n))), Nat.add(Word.to_nat(n, acc), Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b)))), Laws.mul_go_nat(n, mp, at, Word.shl(n, b), acc)) : {Nat.add(_, Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n)))) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %A.ac([Word.to_nat(n, acc), Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b))), Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n)))], A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EAtom{2n}}}, A.EAdd{A.EAdd{A.EAtom{0n}, A.EAtom{1n}}, A.EAtom{2n}}, {==}) : {_ == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %MUL.mul_add_l(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b)), W.scale(W.top(n, False{}, b), W.pow2(n))) : {Nat.add(Word.to_nat(n, acc), _) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.shl(n, b)), W.scale(W.top(n, False{}, b), W.pow2(n))), Nat.double(Word.to_nat(n, b)), Laws.shl_nat(n, b)) : {Nat.add(Word.to_nat(n, acc), Nat.mul(Word.to_nat(mp, at), _)) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %MUL.mul_double_r(Word.to_nat(mp, at), Word.to_nat(n, b)) : {Nat.add(Word.to_nat(n, acc), _) == Nat.add(Word.to_nat(n, acc), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b))) : Nat}
+          %MUL.mul_double_l(Word.to_nat(mp, at), Word.to_nat(n, b)) : {Nat.add(Word.to_nat(n, acc), Nat.double(Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, b)))) == Nat.add(Word.to_nat(n, acc), _) : Nat}
+          {==}
+        case WCon{True{}, +at}:
+          %MUL.mul_add_r_rev(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), Nat.add(Nat.mul(Word.to_nat(mp, at), W.b2n(W.top(n, False{}, b))), W.b2n(W.carry(n, acc, b, False{}))), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), _) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %MUL.mul_add_r_rev(Nat.mul(Word.to_nat(mp, at), W.b2n(W.top(n, False{}, b))), W.b2n(W.carry(n, acc, b, False{})), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n)), _)) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %MUL.mul_assoc(Word.to_nat(mp, at), W.b2n(W.top(n, False{}, b)), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n)), Nat.add(_, Nat.mul(W.b2n(W.carry(n, acc, b, False{})), W.pow2(n))))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %scale_mul(W.top(n, False{}, b), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n)), Nat.add(Nat.mul(Word.to_nat(mp, at), _), Nat.mul(W.b2n(W.carry(n, acc, b, False{})), W.pow2(n))))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %scale_mul(W.carry(n, acc, b, False{}), W.pow2(n)) : {Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.add(Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n)), Nat.add(Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n))), _))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %A.ac([Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n)), Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n))), W.scale(W.carry(n, acc, b, False{}), W.pow2(n))], A.EAdd{A.EAdd{A.EAtom{0n}, A.EAtom{1n}}, A.EAdd{A.EAtom{2n}, A.EAtom{3n}}}, A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EAdd{A.EAtom{2n}, A.EAtom{3n}}}}, {==}) : {_ == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.mul.go(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))), Nat.mul(W.mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), W.pow2(n))), Nat.add(Word.to_nat(n, Word.add(n, acc, b)), Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b)))), Laws.mul_go_nat(n, mp, at, Word.shl(n, b), Word.add(n, acc, b))) : {Nat.add(_, Nat.add(Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n))), W.scale(W.carry(n, acc, b, False{}), W.pow2(n)))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %A.ac([Word.to_nat(n, Word.add(n, acc, b)), Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b))), Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n))), W.scale(W.carry(n, acc, b, False{}), W.pow2(n))], A.EAdd{A.EAdd{A.EAtom{0n}, A.EAtom{3n}}, A.EAdd{A.EAtom{1n}, A.EAtom{2n}}}, A.EAdd{A.EAdd{A.EAtom{0n}, A.EAtom{1n}}, A.EAdd{A.EAtom{2n}, A.EAtom{3n}}}, {==}) : {_ == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.add(n, acc, b)), W.scale(W.carry(n, acc, b, False{}), W.pow2(n))), Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), 0n)), Laws.adc_nat(n, acc, b, False{})) : {Nat.add(_, Nat.add(Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b))), Nat.mul(Word.to_nat(mp, at), W.scale(W.top(n, False{}, b), W.pow2(n))))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %MUL.mul_add_l(Word.to_nat(mp, at), Word.to_nat(n, Word.shl(n, b)), W.scale(W.top(n, False{}, b), W.pow2(n))) : {Nat.add(Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), 0n)), _) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.shl(n, b)), W.scale(W.top(n, False{}, b), W.pow2(n))), Nat.double(Word.to_nat(n, b)), Laws.shl_nat(n, b)) : {Nat.add(Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), 0n)), Nat.mul(Word.to_nat(mp, at), _)) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %MUL.mul_double_r(Word.to_nat(mp, at), Word.to_nat(n, b)) : {Nat.add(Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), 0n)), _) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), Nat.mul(Nat.double(Word.to_nat(mp, at)), Word.to_nat(n, b)))) : Nat}
+          %MUL.mul_double_l(Word.to_nat(mp, at), Word.to_nat(n, b)) : {Nat.add(Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), 0n)), Nat.double(Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, b)))) == Nat.add(Word.to_nat(n, acc), Nat.add(Word.to_nat(n, b), _)) : Nat}
+          A.ac([Word.to_nat(n, acc), Word.to_nat(n, b), Nat.mul(Word.to_nat(mp, at), Word.to_nat(n, b))], A.EAdd{A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EZero{}}}, A.EDbl{A.EAtom{2n}}}, A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EDbl{A.EAtom{2n}}}}, {==})
+
+def mul_nat.z(+n: Nat, +M: Nat) -> {Nat.add(Word.to_nat(n, Word.zero(n)), M) == M : Nat}:
+  %to_nat_zero(n) : {Nat.add(_, M) == M : Nat}
+  {==}
+
+def Laws.mul_nat(n, a, b):
+  Equal.trans(Nat, Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))), Nat.add(Word.to_nat(n, Word.zero(n)), Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b))), Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)),
+    Laws.mul_go_nat(n, n, a, b, Word.zero(n)), mul_nat.z(n, Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b))))
+
+def mul_exact.e(+n: Nat, +a: Word(n), +b: Word(n)) -> {Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))) == Nat.add(Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)), 0n) : Nat}:
+  %N.add_zero(Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b))) : {Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))) == _ : Nat}
+  Laws.mul_nat(n, a, b)
+
+def Laws.mul_exact(n, a, b, g, h):
+  uniq(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)), W.pow2(n), Word.to_nat(n, Word.not(n, Word.mul(n, a, b))), g, W.mulq(n, n, a, b, Word.zero(n)), 0n,
+    mul_exact.e(n, a, b), Laws.not_nat(n, Word.mul(n, a, b)), h)
+
+def mul_comm.e(+n: Nat, +a: Word(n), +b: Word(n)) -> {Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))) == Nat.add(Word.to_nat(n, Word.mul(n, b, a)), Nat.mul(W.mulq(n, n, b, a, Word.zero(n)), W.pow2(n))) : Nat}:
+  Equal.trans(Nat, Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))), Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)), Nat.add(Word.to_nat(n, Word.mul(n, b, a)), Nat.mul(W.mulq(n, n, b, a, Word.zero(n)), W.pow2(n))), Laws.mul_nat(n, a, b),
+    Equal.trans(Nat, Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)), Nat.mul(Word.to_nat(n, b), Word.to_nat(n, a)), Nat.add(Word.to_nat(n, Word.mul(n, b, a)), Nat.mul(W.mulq(n, n, b, a, Word.zero(n)), W.pow2(n))), MUL.mul_comm(Word.to_nat(n, a), Word.to_nat(n, b)),
+      Equal.sym(Nat, Nat.add(Word.to_nat(n, Word.mul(n, b, a)), Nat.mul(W.mulq(n, n, b, a, Word.zero(n)), W.pow2(n))), Nat.mul(Word.to_nat(n, b), Word.to_nat(n, a)), Laws.mul_nat(n, b, a))))
+
+def Laws.mul_comm(n, a, b):
+  Laws.to_nat_inj(n, Word.mul(n, a, b), Word.mul(n, b, a),
+    uniq(Word.to_nat(n, Word.mul(n, a, b)), Word.to_nat(n, Word.mul(n, b, a)), W.pow2(n), Word.to_nat(n, Word.not(n, Word.mul(n, a, b))), Word.to_nat(n, Word.not(n, Word.mul(n, b, a))), W.mulq(n, n, a, b, Word.zero(n)), W.mulq(n, n, b, a, Word.zero(n)),
+      mul_comm.e(n, a, b), Laws.not_nat(n, Word.mul(n, a, b)), Laws.not_nat(n, Word.mul(n, b, a))))
+
+def Laws.u32_mul_comm(a, b):
+  match a b:
+    case U32{+x} U32{+y}:
+      %Laws.mul_comm(32n, x, y) : {U32{Word.mul(32n, x, y)} == U32{_} : U32}
       {==}

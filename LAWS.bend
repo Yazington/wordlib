@@ -277,3 +277,45 @@ law u32_le_nat:
   for +a: U32
   for +b: U32
   {U32.is_le(a, b) == Nat.is_le(U32.to_nat(a), U32.to_nat(b)) : Bool}
+
+# Multiplication
+# --------------
+
+# LAW: each step of the shift-and-add multiplier keeps
+# result + q*2^n == acc + a*b, with q = mulq counting the wraps
+law mul_go_nat:
+  for +n: Nat
+  for +m: Nat
+  for +a: Word(m)
+  for +b: Word(n)
+  for +acc: Word(n)
+  {Nat.add(Word.to_nat(n, Word.mul.go(n, m, a, b, acc)), Nat.mul(W.mulq(n, m, a, b, acc), W.pow2(n))) == Nat.add(Word.to_nat(n, acc), Nat.mul(Word.to_nat(m, a), Word.to_nat(n, b))) : Nat}
+
+# LAW: the product is a*b less some multiple of 2^n
+law mul_nat:
+  for +n: Nat
+  for +a: Word(n)
+  for +b: Word(n)
+  {Nat.add(Word.to_nat(n, Word.mul(n, a, b)), Nat.mul(W.mulq(n, n, a, b, Word.zero(n)), W.pow2(n))) == Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)) : Nat}
+
+# LAW: multiplication without overflow: when a*b < 2^n, the product is exact
+law mul_exact:
+  for +n: Nat
+  for +a: Word(n)
+  for +b: Word(n)
+  for +g: Nat
+  for h: {1n+Nat.add(Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)), g) == W.pow2(n) : Nat}
+  {Word.to_nat(n, Word.mul(n, a, b)) == Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)) : Nat}
+
+# LAW: word multiplication is commutative
+law mul_comm:
+  for +n: Nat
+  for +a: Word(n)
+  for +b: Word(n)
+  {Word.mul(n, a, b) == Word.mul(n, b, a) : Word(n)}
+
+# LAW: U32.mul is commutative
+law u32_mul_comm:
+  for a: U32
+  for b: U32
+  {U32.mul(a, b) == U32.mul(b, a) : U32}

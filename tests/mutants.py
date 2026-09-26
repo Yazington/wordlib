@@ -78,6 +78,17 @@ MUTANTS = [
      "      (bal - amt : U32)", "      (bal + amt : U32)"),
     ("example: guard compares the wrong way", "examples/withdraw/main.bend",
      "  withdraw.go((amt <= bal : U32), bal, amt)", "  withdraw.go((bal <= amt : U32), bal, amt)"),
+    ("def: mulq forgets the adder's carry", "word.bend",
+     "Nat.add(Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b))), b2n(carry(n, acc, b, False{})))",
+     "Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b)))"),
+    ("law: mul_comm claims a*b == a*a", "LAWS.bend",
+     "  {Word.mul(n, a, b) == Word.mul(n, b, a) : Word(n)}", "  {Word.mul(n, a, b) == Word.mul(n, a, a) : Word(n)}"),
+    ("law: mul_exact off by one", "LAWS.bend",
+     "  {Word.to_nat(n, Word.mul(n, a, b)) == Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)) : Nat}",
+     "  {Word.to_nat(n, Word.mul(n, a, b)) == 1n+Nat.mul(Word.to_nat(n, a), Word.to_nat(n, b)) : Nat}"),
+    ("mul: mul_assoc claims a(bc) == (ab)a", "mul.bend",
+     "-> {Nat.mul(a, Nat.mul(b, c)) == Nat.mul(Nat.mul(a, b), c) : Nat}:",
+     "-> {Nat.mul(a, Nat.mul(b, c)) == Nat.mul(Nat.mul(a, b), a) : Nat}:"),
 ]
 
 def check(d):

@@ -2,7 +2,7 @@
 
 Proved laws about Bend 2's fixed-width words: `Word(n)` for every width `n`,
 and `U32` on top of it. Base ships two such laws (`Word.add_comm`,
-`U32.add_comm`); wordlib adds 39, including the semantic bridge that ties
+`U32.add_comm`); wordlib adds 44, including the semantic bridge that ties
 machine arithmetic to `Nat`, so proofs about `U32` code can be done in
 ordinary arithmetic.
 
@@ -12,10 +12,11 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 
 | File | Contents |
 |---|---|
-| `LAWS.bend` | the claims (39 laws) |
+| `LAWS.bend` | the claims (44 laws) |
 | `PROOF.bend` | their proofs |
-| `word.bend` | vocabulary the laws use: `b2n`, `scale`, `pow2`, `maj`, `carry`, `top`, `lsb` |
-| `nat.bend` | `Nat` lemmas: add/mul algebra, cancellation, injectivity, parity, `le_sub` |
+| `word.bend` | vocabulary the laws use: `b2n`, `scale`, `pow2`, `maj`, `carry`, `top`, `lsb`, `mulq` |
+| `nat.bend` | `Nat` lemmas: add algebra, cancellation, injectivity, parity, `le_sub` |
+| `mul.bend` | `Nat.mul` lemmas: distributivity, associativity, commutativity, doubling |
 | `ac.bend` | `ac`: a reflective prover for sums (see below) |
 | `examples/withdraw/` | a U32 program whose safety is proved with wordlib |
 | `tools/` | proof generators and the U32 differential tester |
@@ -41,9 +42,12 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 | `shl_put`, `shl_nat` | `to_nat(shl a) + top·P == 2A` |
 | `shr_pad`, `shr_nat` | `lsb + 2·to_nat(shr a) == A` |
 | `cmp_nat` | `Word.cmp(a, b) == Nat.cmp(A, B)` |
+| `mul_go_nat`, `mul_nat` | `to_nat(a * b) + mulq·P == A·B`: the product, less its wraps |
+| `mul_exact` | if `A·B < P` then `to_nat(a * b) == A·B` (no overflow) |
+| `mul_comm` | `a * b == b * a` (through the bridge) |
 
 **U32** (what Bend programs use): `u32_{xor,and,or}_{comm,assoc}`,
-`u32_add_assoc`, `u32_add_zero`, `u32_xor_zero`, `u32_xor_self`,
+`u32_add_assoc`, `u32_mul_comm`, `u32_add_zero`, `u32_xor_zero`, `u32_xor_self`,
 `u32_not_not`, `u32_to_nat_inj`, `u32_sub_nat`, `u32_cmp_nat`, `u32_lt_nat`,
 `u32_le_nat`.
 
@@ -93,7 +97,7 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
 1. **The proof gate**: `bend PROOF.bend` and the example's `PROOF.bend` print
    "All terms check." (about 0.3s).
 2. **ac tests**: true identities check; a false one is rejected.
-3. **Mutation tests** (`tests/mutants.py`): 28 planted bugs in laws,
+3. **Mutation tests** (`tests/mutants.py`): 32 planted bugs in laws,
    definitions, the `ac` normalizer, `Nat` lemmas and the example program.
    Every one must make the checker fail. A surviving mutant means a proof is
    weaker than it looks.
@@ -111,6 +115,10 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
 - A JS build of a `do` block with a few hundred steps overflows node's parser
   stack on load (`RangeError: Maximum call stack size exceeded`); splitting
   it into smaller defs works around it.
+- Laws whose statement holds 2^32 (like `mul_nat` at `n = 32n`) cannot be
+  checked yet: conversion normalizes before comparing, so even identical
+  `W.pow2(32n)` terms expand to a unary 2^32 and overflow the stack
+  (bendlang/bend#1071). The width-generic laws are unaffected.
 - Compiled `Nat` is a native word that stops the program past 2^48-1; the laws
   hold for all `Nat`, and the runtime fails loudly rather than wrapping.
 

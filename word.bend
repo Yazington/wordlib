@@ -66,3 +66,17 @@ def lsb(n: Nat, w: Word(n)) -> Bool:
       match w:
         case WCon{b, t}:
           b
+
+# how many times Word.mul.go's result wrapped past 2^n: each step adds the
+# carry of acc + b (on a 1 bit) and, for every later bit of a, the top bit
+# that shl pushed out of b
+def mulq(+n: Nat, m: Nat, a: Word(m), +b: Word(n), +acc: Word(n)) -> Nat:
+  match m:
+    case 0n:
+      0n
+    case 1n++mp:
+      match a:
+        case WCon{False{}, +at}:
+          Nat.add(mulq(n, mp, at, Word.shl(n, b), acc), Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b))))
+        case WCon{True{}, +at}:
+          Nat.add(mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), Nat.add(Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b))), b2n(carry(n, acc, b, False{}))))
