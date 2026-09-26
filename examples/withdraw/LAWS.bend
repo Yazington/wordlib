@@ -8,12 +8,12 @@ import ./main.bend as M
 law covered:
   for +bal: U32
   for +amt: U32
-  for +h: {U32.is_le(amt, bal) == True{} : Bool}
-  {Nat.add(U32.to_nat(M.withdraw(bal, amt)), U32.to_nat(amt)) == U32.to_nat(bal) : Nat}
+  for +h: {(amt <= bal : U32) == True{} : Bool}
+  {(U32.to_nat(M.withdraw(bal, amt)) + U32.to_nat(amt) : Nat) == U32.to_nat(bal) : Nat}
 
 # LAW: when amt > bal, the balance is untouched
 law uncovered:
   for +bal: U32
   for +amt: U32
-  for h: {U32.is_le(amt, bal) == False{} : Bool}
+  for h: {(amt <= bal : U32) == False{} : Bool}
   {M.withdraw(bal, amt) == bal : U32}

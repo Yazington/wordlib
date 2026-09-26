@@ -1,47 +1,59 @@
 #!/bin/sh
-# Runs every check: the proof gate, the ac tests (one must pass, one must
-# fail), the mutation tests and a quick U32 differential test.
+# Runs every check: the proof gates, the ac tests (one must check, one must
+# not), the mutation tests, a quick U32 differential test, and property tests
+# of every law when bendcheck sits next to wordlib (or BENDCHECK points to it).
 set -u
 export BEND_NO_TELEMETRY=1
 BEND=${BEND:-$HOME/.bend/bin/bend}
+BENDCHECK=${BENDCHECK:-../bendcheck}
 cd "$(dirname "$0")"
 fail=0
-step() { printf '%-34s' "$1"; }
-ok() { echo "ok"; }
-no() { echo "FAIL"; fail=1; }
 
-step "proofs (bend PROOF.bend)"
-out=$("$BEND" PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
+step() { printf '%-36s' "$1"; }
+pass() { echo "ok${1:+ ($1)}"; }
+flunk() { echo "FAIL"; fail=1; printf '%s\n' "$1" | head -30; }
 
-step "example: withdraw laws"
-out=$("$BEND" examples/withdraw/PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
+# gate NAME FILE: FILE must check
+gate() {
+  step "$1"
+  out=$("$BEND" "$2" --check-only 2>&1)
+  if echo "$out" | grep -q "All terms check."; then pass; else flunk "$out"; fi
+}
 
-step "list laws"
-out=$("$BEND" list/PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
+# rejects NAME FILE: FILE must not check
+rejects() {
+  step "$1"
+  out=$("$BEND" "$2" --check-only 2>&1)
+  if echo "$out" | grep -q "All terms check."; then flunk "$2 checks"; else pass; fi
+}
 
-step "ac: true identities check"
-out=$("$BEND" tests/ac_ok.bend --check-only 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
-
-step "ac: false identity is rejected"
-out=$("$BEND" tests/ac_bad.bend --check-only 2>&1); echo "$out" | grep -q "All terms check." && no || ok
+gate "proofs" PROOF.bend
+gate "list proofs" list/PROOF.bend
+gate "example: withdraw" examples/withdraw/PROOF.bend
+gate "ac: true identities" tests/ac_ok.bend
+rejects "ac: a false identity is rejected" tests/ac_bad.bend
 
 step "mutation tests"
-out=$(python3 tests/mutants.py 2>&1); [ $? -eq 0 ] && echo "ok ($(echo "$out" | tail -1))" || { no; echo "$out"; }
+if out=$(python3 tests/mutants.py 2>&1); then pass "$(echo "$out" | tail -1)"; else flunk "$out"; fi
 
 step "U32 differential (C, JS, checker)"
-out=$(python3 tools/diff_u32.py 200 8 2>&1); [ $? -eq 0 ] && ok || { no; echo "$out"; }
+if out=$(python3 tools/diff_u32.py 200 8 2>&1); then pass; else flunk "$out"; fi
 
 step "property tests (bendcheck)"
-BENDCHECK=${BENDCHECK:-../bendcheck}
 if [ -f "$BENDCHECK/tools/lawcheck.py" ]; then
-  out=$(python3 "$BENDCHECK/tools/lawcheck.py" LAWS.bend --widths 1,3,8 --count 100 2>&1); r1=$?
-  out2=$(python3 "$BENDCHECK/tools/lawcheck.py" examples/withdraw/LAWS.bend 2>&1); r2=$?
-  out3=$(python3 "$BENDCHECK/tools/lawcheck.py" list/LAWS.bend 2>&1); r3=$?
-  out4=$(python3 "$BENDCHECK/tools/lawcheck.py" list/CONJECTURES.bend 2>&1); r4=$?
-  if [ $r1 -eq 0 ] && [ $r2 -eq 0 ] && [ $r3 -eq 0 ] && [ $r4 -eq 0 ]; then
-    echo "ok ($(echo "$out" | tail -1 | sed 's/lawcheck: //'))"
+  ok=0
+  out=$(python3 "$BENDCHECK/tools/lawcheck.py" LAWS.bend --widths 1,3,8 --count 100 2>&1) || ok=1
+  for f in examples/withdraw/LAWS.bend list/LAWS.bend list/CONJECTURES.bend; do
+    more=$(python3 "$BENDCHECK/tools/lawcheck.py" "$f" 2>&1) || ok=1
+    out="$out
+$more"
+  done
+  passed=$(echo "$out" | grep -c '^  ok  ')
+  gaveup=$(echo "$out" | grep -c '^  GAVE UP')
+  if [ $ok -eq 0 ]; then
+    pass "$passed passed, $gaveup gave up: precondition rarely held"
   else
-    no; printf '%s\n%s\n%s\n%s\n' "$out" "$out2" "$out3" "$out4" | grep -A2 'FAILED\|build' | head -30
+    flunk "$(echo "$out" | grep -A2 'FAILED\|do not build')"
   fi
 else
   echo "skipped (clone bendcheck next to wordlib, or set BENDCHECK)"

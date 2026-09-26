@@ -1,6 +1,8 @@
-import Base
-import ../ac.bend as A
+# ac.bend's negative test: this false identity must be rejected.
 
-# FALSE: a + b == a + a  (must be rejected)
-def bad(+a: Nat, +b: Nat) -> {Nat.add(a, b) == Nat.add(a, a) : Nat}:
-  A.ac([a, b], A.EAdd{A.EAtom{0n}, A.EAtom{1n}}, A.EAdd{A.EAtom{0n}, A.EAtom{0n}}, {==})
+import Base
+import ../lib/ac.bend as A
+
+# FALSE: a + b == a + a
+def bad(+a: Nat, +b: Nat) -> {(a + b : Nat) == (a + a : Nat) : Nat}:
+  A.ac([a, b], A.add(A.x0(), A.x1()), A.add(A.x0(), A.x0()), {==})

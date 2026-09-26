@@ -5,17 +5,28 @@ import ./main.bend as M
 import ./LAWS.bend as Laws
 import ../../LAWS.bend as WL
 import ../../PROOF.bend as WP
-import ../../nat.bend as N
+import ../../lib/nat.bend as N
 
-# a covered withdrawal subtracts, and the subtraction does not wrap:
+# A covered withdrawal subtracts, and the subtraction does not wrap:
 # u32_le_nat turns the U32 guard into Nat order, le_sub names the gap
-# bal - amt, and u32_sub_nat says the U32 result is exactly that gap
+# d = bal - amt, and u32_sub_nat says the U32 result is exactly d.
 def Laws.covered(bal, amt, h):
-  %Equal.sym(Bool, U32.is_le(amt, bal), True{}, h) : {Nat.add(U32.to_nat(M.withdraw.go(_, bal, amt)), U32.to_nat(amt)) == U32.to_nat(bal) : Nat}
-  %Equal.sym(Nat, U32.to_nat(U32.sub(bal, amt)), Nat.sub(U32.to_nat(bal), U32.to_nat(amt)), WL.u32_sub_nat(bal, amt, Nat.sub(U32.to_nat(bal), U32.to_nat(amt)), N.le_sub(U32.to_nat(amt), U32.to_nat(bal), Equal.trans(Bool, Nat.is_le(U32.to_nat(amt), U32.to_nat(bal)), U32.is_le(amt, bal), True{}, Equal.sym(Bool, U32.is_le(amt, bal), Nat.is_le(U32.to_nat(amt), U32.to_nat(bal)), WL.u32_le_nat(amt, bal)), h)))) : {Nat.add(_, U32.to_nat(amt)) == U32.to_nat(bal) : Nat}
-  %Equal.sym(Nat, U32.to_nat(bal), Nat.add(U32.to_nat(amt), Nat.sub(U32.to_nat(bal), U32.to_nat(amt))), N.le_sub(U32.to_nat(amt), U32.to_nat(bal), Equal.trans(Bool, Nat.is_le(U32.to_nat(amt), U32.to_nat(bal)), U32.is_le(amt, bal), True{}, Equal.sym(Bool, U32.is_le(amt, bal), Nat.is_le(U32.to_nat(amt), U32.to_nat(bal)), WL.u32_le_nat(amt, bal)), h))) : {Nat.add(Nat.sub(U32.to_nat(bal), U32.to_nat(amt)), U32.to_nat(amt)) == _ : Nat}
-  N.add_comm(Nat.sub(U32.to_nat(bal), U32.to_nat(amt)), U32.to_nat(amt))
+  +B0 = U32.to_nat(bal)
+  +A0 = U32.to_nat(amt)
+  +d = Nat.sub(B0, A0)
+  # amt <= bal as U32s, so as Nats
+  +le = Equal.trans(Bool, (A0 <= B0 : Nat), (amt <= bal : U32), True{},
+    Equal.sym(Bool, (amt <= bal : U32), (A0 <= B0 : Nat), WL.u32_le_nat(amt, bal)), h)
+  # bal == amt + d
+  +gap = N.le_sub(A0, B0, le)
+  %Equal.sym(Bool, (amt <= bal : U32), True{}, h)
+    : {(U32.to_nat(M.withdraw.go(_, bal, amt)) + A0 : Nat) == B0 : Nat}
+  %Equal.sym(Nat, U32.to_nat((bal - amt : U32)), d, WL.u32_sub_nat(bal, amt, d, gap))
+    : {(_ + A0 : Nat) == B0 : Nat}
+  %Equal.sym(Nat, B0, (A0 + d : Nat), gap) : {(d + A0 : Nat) == _ : Nat}
+  N.add_comm(d, A0)
 
+# an uncovered withdrawal returns the balance untouched
 def Laws.uncovered(bal, amt, h):
-  %Equal.sym(Bool, U32.is_le(amt, bal), False{}, h) : {M.withdraw.go(_, bal, amt) == bal : U32}
+  %Equal.sym(Bool, (amt <= bal : U32), False{}, h) : {M.withdraw.go(_, bal, amt) == bal : U32}
   {==}

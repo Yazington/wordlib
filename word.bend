@@ -25,7 +25,7 @@ def pow2(n: Nat) -> Nat:
     case 1n+p:
       Nat.double(pow2(p))
 
-# majority of three bits: a full adder's carry out
+# majority of three bits: a full adder's carry-out
 def maj(a: Bool, b: Bool, c: Bool) -> Bool:
   match a b c:
     case False{} False{} _:
@@ -37,7 +37,7 @@ def maj(a: Bool, b: Bool, c: Bool) -> Bool:
     case True{} False{} _:
       c
 
-# the carry out of Word.adc's add: the bit an n-bit sum overflows into
+# the carry-out of Word.adc's add: the bit an n-bit sum overflows into
 def carry(n: Nat, a: Word(n), b: Word(n), c: Bool) -> Bool:
   match n:
     case 0n:
@@ -67,9 +67,9 @@ def lsb(n: Nat, w: Word(n)) -> Bool:
         case WCon{b, t}:
           b
 
-# how many times Word.mul.go's result wrapped past 2^n: each step adds the
-# carry of acc + b (on a 1 bit) and, for every later bit of a, the top bit
-# that shl pushed out of b
+# how many times Word.mul.go's result wraps past 2^n. Each step of the
+# shift-and-add multiplier adds the carry of acc + b (on a 1 bit), and,
+# for every later bit of a, the top bit that shl pushes out of b.
 def mulq(+n: Nat, m: Nat, a: Word(m), +b: Word(n), +acc: Word(n)) -> Nat:
   match m:
     case 0n:
@@ -77,6 +77,9 @@ def mulq(+n: Nat, m: Nat, a: Word(m), +b: Word(n), +acc: Word(n)) -> Nat:
     case 1n++mp:
       match a:
         case WCon{False{}, +at}:
-          Nat.add(mulq(n, mp, at, Word.shl(n, b), acc), Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b))))
+          +lost = (Word.to_nat(mp, at) * b2n(top(n, False{}, b)) : Nat)
+          (mulq(n, mp, at, Word.shl(n, b), acc) + lost : Nat)
         case WCon{True{}, +at}:
-          Nat.add(mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)), Nat.add(Nat.mul(Word.to_nat(mp, at), b2n(top(n, False{}, b))), b2n(carry(n, acc, b, False{}))))
+          +lost = (Word.to_nat(mp, at) * b2n(top(n, False{}, b)) : Nat)
+          +wrap = b2n(carry(n, acc, b, False{}))
+          (mulq(n, mp, at, Word.shl(n, b), Word.add(n, acc, b)) + (lost + wrap) : Nat)

@@ -19,18 +19,16 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 
 ## Layout
 
-| File | Contents |
+| Path | Contents |
 |---|---|
-| `LAWS.bend` | the claims (44 laws) |
-| `PROOF.bend` | their proofs |
-| `word.bend` | vocabulary the laws use: `b2n`, `scale`, `pow2`, `maj`, `carry`, `top`, `lsb`, `mulq` |
-| `nat.bend` | `Nat` lemmas: add algebra, cancellation, injectivity, parity, `le_sub` |
-| `mul.bend` | `Nat.mul` lemmas: distributivity, associativity, commutativity, doubling |
-| `ac.bend` | `ac`: a reflective prover for sums (see below) |
-| `list/` | laws of Base's `List` functions (26 laws, own `LAWS.bend`/`PROOF.bend`); `count.bend` (counting, `sorted`, the U32 `sort`); `CONJECTURES.bend` (tested, not yet proved) |
+| `LAWS.bend` | the word laws (44) |
+| `PROOF.bend` | the index of their proofs; `bend PROOF.bend` checks them all |
+| `word.bend` | the vocabulary the laws use: `b2n`, `scale`, `pow2`, `carry`, `top`, `lsb`, `mulq` |
+| `proofs/` | the word proofs by topic: `bits`, `add`, `sub`, `shift`, `compare`, `mul`, `u32`, and `wrap` (arithmetic of values below 2^n, which the others share) |
+| `lib/` | general lemmas: `nat` (addition, cancellation, clashes, order), `nat_mul` (multiplication), `ac` (a prover for sums) |
+| `list/` | the list laws (26): `LAWS.bend`, `PROOF.bend`, `proofs/` (`append`, `reverse`, `index`, `build`, `sort`), `count.bend` (counting and the U32 sort), `CONJECTURES.bend` (tested, not yet proved) |
 | `examples/withdraw/` | a U32 program whose safety is proved with wordlib |
-| `tools/` | proof generators and the U32 differential tester |
-| `tests/` | ac tests and mutation tests |
+| `tests/`, `tools/` | the ac tests, the mutation tests and the U32 differential tester |
 
 ## The laws
 
@@ -112,7 +110,15 @@ import 0xb13667d52aa56e002b4d09883d7fce3e/PROOF.bend as WP
 import 0xb13667d52aa56e002b4d09883d7fce3e/nat.bend as N
 ```
 
-or from a checkout, `import ../wordlib/LAWS.bend as WL` and so on. Then:
+That release predates the `lib/` layout and the list laws. From a checkout:
+
+```python
+import ../wordlib/LAWS.bend as WL
+import ../wordlib/PROOF.bend as WP
+import ../wordlib/lib/nat.bend as N
+```
+
+Then:
 
 ```python
 # U32 subtraction that provably does not wrap
@@ -126,29 +132,48 @@ U32 result is exactly that gap (`u32_sub_nat`).
 ## `ac`: sums by reflection
 
 Bend has no tactics, so rearranging `a + (b + c)` into `c + (b + a)` normally
-takes a chain of rewrites. `ac.bend` makes it one call. An `Expr` is a sum of
-atoms with doubling; `norm` counts each atom; `ac` is proved sound once, so
+takes a chain of rewrites. `lib/ac.bend` makes it one call. An `Expr` is a sum
+of atoms with doubling; `norm` counts each atom; `ac` is proved sound once, so
 Bend checks `{norm(e1) == norm(e2)}` by computation and returns the goal:
 
 ```python
-A.ac([a, b, c], A.EAdd{A.EAtom{0n}, A.EAdd{A.EAtom{1n}, A.EAtom{2n}}},
-                A.EAdd{A.EAtom{2n}, A.EAdd{A.EAtom{1n}, A.EAtom{0n}}}, {==})
-# : {Nat.add(a, Nat.add(b, c)) == Nat.add(c, Nat.add(b, a))}
+A.ac([a, b, c], A.add(A.x0(), A.add(A.x1(), A.x2())),
+                A.add(A.x2(), A.add(A.x1(), A.x0())), {==})
+# : {(a + (b + c) : Nat) == (c + (b + a) : Nat) : Nat}
 ```
+
+`x0()` to `x7()` are the atoms, in the order of the list; `add`, `dbl` and
+`zero` stand for `Nat.add`, `Nat.double` and `0n`.
 
 Atoms can be any terms and numerals ride along as atoms (`[x, y, 1n]`). A
 false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
+
+## Writing proofs
+
+- State with operators: `(a + (b + c) : Nat)` is `Nat.add(a, Nat.add(b, c))`.
+- A rewrite `%e : P`, with `e : {a == b}`, takes the goal `P[b/_]` to
+  `P[a/_]`. Name long terms with lets (`+T = Word.to_nat(p, t)`) so each `P`
+  fits on a line.
+- Give every helper a one-line comment with its statement in plain math.
+- A list of arbitrary elements is affine: a proof may use it once. Carry the
+  second use in an accumulator, or in a separate `Nat`, instead of calling a
+  second lemma on the same list.
+- When the next step depends on a value the proof cannot compute (a carry, a
+  comparison), take the induction hypothesis as a function of that value
+  (`ih: @k: Bool -> ...`), or take one hypothesis per outcome and match.
+- Keep lines within 100 columns.
 
 ## How it is verified
 
 `./check.sh` runs:
 
 1. **The proof gates**: `bend PROOF.bend`, `bend list/PROOF.bend` and the
-   example's `PROOF.bend` print "All terms check." (well under a second).
+   example's `PROOF.bend` print "All terms check." (about a quarter second
+   each).
 2. **ac tests**: true identities check; a false one is rejected.
-3. **Mutation tests** (`tests/mutants.py`): 42 planted bugs in laws,
-   definitions, the `ac` normalizer, `Nat` lemmas, list and sort laws, and the
-   example program.
+3. **Mutation tests** (`tests/mutants.py`): 43 planted bugs in laws,
+   definitions, the `ac` normalizer, the `Nat` lemmas, the proof index, the list
+   and sort laws, and the example program.
    Every one must make the checker fail. A surviving mutant means a proof is
    weaker than it looks.
 4. **Differential test** (`tools/diff_u32.py`): Bend compiles U32 ops to
@@ -167,7 +192,8 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
    157 properties: 153 pass and 4 give up, because their preconditions (two
    random words with the same value, a 16-bit product that fits) almost never
    hold. The 26 list laws, tested at `U32` elements, all pass, and so do the
-   3 sorting conjectures.
+   3 sorting conjectures. `./check.sh` runs a quicker pass (widths 1, 3 and 8):
+   130 properties pass and 2 give up.
 
 ## Notes on Bend 2.0.28
 

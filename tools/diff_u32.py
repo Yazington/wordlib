@@ -28,7 +28,8 @@ def rows(n, seed=1):
 
 ROW = '''def row(+a: U32, +b: U32, +k: Nat) -> String:
   U32.show((a + b : U32)) ++ " " ++ U32.show((a - b : U32)) ++ " " ++ U32.show((a * b : U32)) ++ " "
-    ++ U32.show((a .&. b : U32)) ++ " " ++ U32.show((a .|. b : U32)) ++ " " ++ U32.show((a .^. b : U32)) ++ " "
+    ++ U32.show((a .&. b : U32)) ++ " " ++ U32.show((a .|. b : U32)) ++ " "
+    ++ U32.show((a .^. b : U32)) ++ " "
     ++ U32.show((a / b : U32)) ++ " " ++ U32.show((a % b : U32)) ++ " "
     ++ U32.show(U32.shln(a, k)) ++ " " ++ U32.show(U32.shrn(a, k)) ++ " "
     ++ Bool.show((a < b : U32)) ++ " " ++ Bool.show((a <= b : U32))
