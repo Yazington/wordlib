@@ -50,13 +50,18 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 ## Using it
 
 Import both the claims and the proofs; Bend refuses to use a law whose proof
-is not in scope ("an unfilled law is a dead claim"):
+is not in scope ("an unfilled law is a dead claim"). From BendHub, no clone
+needed (the version at the first commit, 39 laws):
 
 ```python
-import ../wordlib/LAWS.bend as WL
-import ../wordlib/PROOF.bend as WP
-import ../wordlib/nat.bend as N
+import 0x340691c4c9cfde2764a3ed46e48d644a/LAWS.bend as WL
+import 0x340691c4c9cfde2764a3ed46e48d644a/PROOF.bend as WP
+import 0x340691c4c9cfde2764a3ed46e48d644a/nat.bend as N
+```
 
+or from a checkout, `import ../wordlib/LAWS.bend as WL` and so on. Then:
+
+```python
 # U32 subtraction that provably does not wrap
 WL.u32_sub_nat(bal, amt, d, gap)  # : {U32.to_nat(bal - amt) == d}
 ```
