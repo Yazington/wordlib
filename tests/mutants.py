@@ -6,7 +6,7 @@ import os, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BEND = os.path.expanduser("~/.bend/bin/bend")
-GATES = ["PROOF.bend", "examples/withdraw/PROOF.bend"]
+GATES = ["PROOF.bend", "examples/withdraw/PROOF.bend", "list/PROOF.bend"]
 
 # (name, file, old, new): old must occur in file
 MUTANTS = [
@@ -89,6 +89,21 @@ MUTANTS = [
     ("mul: mul_assoc claims a(bc) == (ab)a", "mul.bend",
      "-> {Nat.mul(a, Nat.mul(b, c)) == Nat.mul(Nat.mul(a, b), c) : Nat}:",
      "-> {Nat.mul(a, Nat.mul(b, c)) == Nat.mul(Nat.mul(a, b), a) : Nat}:"),
+    ("list: reverse_append in the wrong order", "list/LAWS.bend",
+     "{List.reverse(a, A, List.append(a, A, xs, ys)) == List.append(a, A, List.reverse(a, A, ys), List.reverse(a, A, xs)) : List<a, A>}",
+     "{List.reverse(a, A, List.append(a, A, xs, ys)) == List.append(a, A, List.reverse(a, A, xs), List.reverse(a, A, ys)) : List<a, A>}"),
+    ("list: length_take uses max", "list/LAWS.bend",
+     "{List.length(a, A, List.take(a, A, xs, n)) == Nat.min(n, List.length(a, A, xs)) : Nat}",
+     "{List.length(a, A, List.take(a, A, xs, n)) == Nat.max(n, List.length(a, A, xs)) : Nat}"),
+    ("list: get_set reads index 0", "list/LAWS.bend",
+     "{List.get(a, A, List.set(a, A, xs, n, x), n) == Some{x} : Maybe<a, A>}",
+     "{List.get(a, A, List.set(a, A, xs, n, x), 0n) == Some{x} : Maybe<a, A>}"),
+    ("list: get_set without its bound", "list/LAWS.bend",
+     "  for h: {Nat.is_lt(n, List.length(a, A, xs)) == True{} : Bool}\n", ""),
+    ("list: length_range off by one", "list/LAWS.bend",
+     "{List.length(&2, Nat, List.range(n)) == n : Nat}", "{List.length(&2, Nat, List.range(n)) == 1n+n : Nat}"),
+    ("list: append_nil on the left of a cons", "list/LAWS.bend",
+     "{List.append(a, A, xs, Nil{}) == xs : List<a, A>}", "{List.append(a, A, xs, Nil{}) == List.reverse(a, A, xs) : List<a, A>}"),
 ]
 
 def check(d):

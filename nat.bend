@@ -15,7 +15,7 @@ def add_zero(+a: Nat) -> {a == Nat.add(a, 0n) : Nat}:
       %add_zero(p) : {1n+p == 1n+_ : Nat}
       {==}
 
-def add_succ(+a: Nat, +b: Nat) -> {1n+Nat.add(a, b) == Nat.add(a, 1n+b) : Nat}:
+def add_succ(+a: Nat, -b: Nat) -> {1n+Nat.add(a, b) == Nat.add(a, 1n+b) : Nat}:
   match a:
     case 0n:
       {==}

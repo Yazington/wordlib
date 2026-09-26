@@ -16,6 +16,9 @@ out=$("$BEND" PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok |
 step "example: withdraw laws"
 out=$("$BEND" examples/withdraw/PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
 
+step "list laws"
+out=$("$BEND" list/PROOF.bend 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
+
 step "ac: true identities check"
 out=$("$BEND" tests/ac_ok.bend --check-only 2>&1); echo "$out" | grep -q "All terms check." && ok || { no; echo "$out" | head -20; }
 
@@ -33,10 +36,11 @@ BENDCHECK=${BENDCHECK:-../bendcheck}
 if [ -f "$BENDCHECK/tools/lawcheck.py" ]; then
   out=$(python3 "$BENDCHECK/tools/lawcheck.py" LAWS.bend --widths 1,3,8 --count 100 2>&1); r1=$?
   out2=$(python3 "$BENDCHECK/tools/lawcheck.py" examples/withdraw/LAWS.bend 2>&1); r2=$?
-  if [ $r1 -eq 0 ] && [ $r2 -eq 0 ]; then
+  out3=$(python3 "$BENDCHECK/tools/lawcheck.py" list/LAWS.bend 2>&1); r3=$?
+  if [ $r1 -eq 0 ] && [ $r2 -eq 0 ] && [ $r3 -eq 0 ]; then
     echo "ok ($(echo "$out" | tail -1 | sed 's/lawcheck: //'))"
   else
-    no; printf '%s\n%s\n' "$out" "$out2" | grep -A2 'FAILED\|build' | head -30
+    no; printf '%s\n%s\n%s\n' "$out" "$out2" "$out3" | grep -A2 'FAILED\|build' | head -30
   fi
 else
   echo "skipped (clone bendcheck next to wordlib, or set BENDCHECK)"

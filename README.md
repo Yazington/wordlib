@@ -7,8 +7,9 @@ Bend promises code that is proved correct. wordlib is the library that makes
 that cheap: laws you import instead of re-proving, a prover for the tedious
 steps, and tests that catch a false law before you spend time proving it.
 
-Today: 44 laws on machine words (`Word(n)` at every width, and `U32`), the
-bridge from machine arithmetic to `Nat`, and `ac`, a prover for sums.
+Today: 60 laws. 44 on machine words (`Word(n)` at every width, and `U32`),
+with the bridge from machine arithmetic to `Nat`; 16 on lists, for any
+element type; and `ac`, a prover for sums.
 Every law is also property-tested by
 [bendcheck](https://github.com/Yazington/bendcheck)'s `lawcheck`, a companion
 library, so a wrong law fails with a counterexample in seconds instead of
@@ -26,6 +27,7 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 | `nat.bend` | `Nat` lemmas: add algebra, cancellation, injectivity, parity, `le_sub` |
 | `mul.bend` | `Nat.mul` lemmas: distributivity, associativity, commutativity, doubling |
 | `ac.bend` | `ac`: a reflective prover for sums (see below) |
+| `list/` | laws of Base's `List` functions (16 laws, own `LAWS.bend`/`PROOF.bend`) |
 | `examples/withdraw/` | a U32 program whose safety is proved with wordlib |
 | `tools/` | proof generators and the U32 differential tester |
 | `tests/` | ac tests and mutation tests |
@@ -58,6 +60,27 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 `u32_add_assoc`, `u32_mul_comm`, `u32_add_zero`, `u32_xor_zero`, `u32_xor_self`,
 `u32_not_not`, `u32_to_nat_inj`, `u32_sub_nat`, `u32_cmp_nat`, `u32_lt_nat`,
 `u32_le_nat`.
+
+**Lists** (`list/`, for every quantity and element type):
+
+| Law | Statement |
+|---|---|
+| `append_nil`, `append_assoc` | `xs ++ [] == xs`, `(xs ++ ys) ++ zs == xs ++ (ys ++ zs)` |
+| `length_append` | `length(xs ++ ys) == length xs + length ys` |
+| `concat_append` | `concat(xss ++ yss) == concat xss ++ concat yss` |
+| `reverse_go`, `reverse_append` | `reverse(xs ++ ys) == reverse ys ++ reverse xs` |
+| `reverse_reverse`, `length_reverse` | `reverse(reverse xs) == xs`; the length is kept |
+| `take_drop` | `take(xs, n) ++ drop(xs, n) == xs` |
+| `length_take`, `length_drop` | `min(n, length xs)` and `length xs - n` elements |
+| `length_set`, `get_set` | `set` keeps the length; `get(set(xs, n, x), n) == Some x` when `n < length xs` |
+| `length_zip`, `length_range`, `length_replicate` | `min` of the lengths; `n`; `n` |
+
+A list of arbitrary elements is affine: a proof may use it once. So the
+proofs never call two lemmas on the same list; helpers carry the second use
+in an accumulator instead (reversing twice is `rev_rev(xs, acc)`, and the
+length of a reversal carries the accumulator's length as a separate `Nat`).
+`lawcheck` caught the first draft of `reverse_append`, which kept the order
+of the parts, at `([0], [1])` before any proof was attempted.
 
 ## Using it
 
@@ -102,11 +125,12 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
 
 `./check.sh` runs:
 
-1. **The proof gate**: `bend PROOF.bend` and the example's `PROOF.bend` print
-   "All terms check." (about 0.3s).
+1. **The proof gates**: `bend PROOF.bend`, `bend list/PROOF.bend` and the
+   example's `PROOF.bend` print "All terms check." (well under a second).
 2. **ac tests**: true identities check; a false one is rejected.
-3. **Mutation tests** (`tests/mutants.py`): 32 planted bugs in laws,
-   definitions, the `ac` normalizer, `Nat` lemmas and the example program.
+3. **Mutation tests** (`tests/mutants.py`): 38 planted bugs in laws,
+   definitions, the `ac` normalizer, `Nat` lemmas, list laws and the example
+   program.
    Every one must make the checker fail. A surviving mutant means a proof is
    weaker than it looks.
 4. **Differential test** (`tools/diff_u32.py`): Bend compiles U32 ops to
@@ -121,9 +145,10 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
    to wordlib or `BENDCHECK` points to it): each law becomes random tests at
    several widths, with hypotheses as preconditions. Proved laws cannot fail,
    so this checks the compiled code against the definitions and screens new
-   laws before anyone proves them. Across widths 1 to 16 the 44 laws give 157
-   properties: 153 pass and 4 give up, because their preconditions (two random
-   words with the same value, a 16-bit product that fits) almost never hold.
+   laws before anyone proves them. Across widths 1 to 16 the 44 word laws give
+   157 properties: 153 pass and 4 give up, because their preconditions (two
+   random words with the same value, a 16-bit product that fits) almost never
+   hold. The 16 list laws, tested at `U32` elements, all pass.
 
 ## Notes on Bend 2.0.28
 
