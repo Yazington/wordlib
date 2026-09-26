@@ -1,10 +1,15 @@
 # wordlib
 
-Proved laws about Bend 2's fixed-width words: `Word(n)` for every width `n`,
-and `U32` on top of it. Base ships two such laws (`Word.add_comm`,
-`U32.add_comm`); wordlib adds 44, including the semantic bridge that ties
-machine arithmetic to `Nat`, so proofs about `U32` code can be done in
-ordinary arithmetic.
+A verified standard library for Bend: proved laws, proof automation and
+property-based testing, so Bend programs ship with guarantees.
+
+Bend promises code that is proved correct. wordlib is the library that makes
+that cheap: laws you import instead of re-proving, a prover for the tedious
+steps, and tests that catch a false law before you spend time proving it.
+
+Today: 44 laws on machine words (`Word(n)` at every width, and `U32`), the
+bridge from machine arithmetic to `Nat`, and `ac`, a prover for sums.
+Property-based testing is coming from bendcheck, a companion library.
 
 Built against Bend 2.0.28. `./check.sh` runs every check.
 
