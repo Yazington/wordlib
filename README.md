@@ -108,3 +108,7 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
   it into smaller defs works around it.
 - Compiled `Nat` is a native word that stops the program past 2^48-1; the laws
   hold for all `Nat`, and the runtime fails loudly rather than wrapping.
+
+## License
+
+MIT. See `LICENSE`.
