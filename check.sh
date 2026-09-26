@@ -28,5 +28,19 @@ out=$(python3 tests/mutants.py 2>&1); [ $? -eq 0 ] && echo "ok ($(echo "$out" | 
 step "U32 differential (C, JS, checker)"
 out=$(python3 tools/diff_u32.py 200 8 2>&1); [ $? -eq 0 ] && ok || { no; echo "$out"; }
 
+step "property tests (bendcheck)"
+BENDCHECK=${BENDCHECK:-../bendcheck}
+if [ -f "$BENDCHECK/tools/lawcheck.py" ]; then
+  out=$(python3 "$BENDCHECK/tools/lawcheck.py" LAWS.bend --widths 1,3,8 --count 100 2>&1); r1=$?
+  out2=$(python3 "$BENDCHECK/tools/lawcheck.py" examples/withdraw/LAWS.bend 2>&1); r2=$?
+  if [ $r1 -eq 0 ] && [ $r2 -eq 0 ]; then
+    echo "ok ($(echo "$out" | tail -1 | sed 's/lawcheck: //'))"
+  else
+    no; printf '%s\n%s\n' "$out" "$out2" | grep -A2 'FAILED\|build' | head -30
+  fi
+else
+  echo "skipped (clone bendcheck next to wordlib, or set BENDCHECK)"
+fi
+
 [ $fail -eq 0 ] && echo "ALL CHECKS PASSED" || echo "SOME CHECKS FAILED"
 exit $fail
