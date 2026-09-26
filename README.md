@@ -63,12 +63,12 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 
 Import both the claims and the proofs; Bend refuses to use a law whose proof
 is not in scope ("an unfilled law is a dead claim"). From BendHub, no clone
-needed (the version at the first commit, 39 laws):
+needed (44 laws):
 
 ```python
-import 0x340691c4c9cfde2764a3ed46e48d644a/LAWS.bend as WL
-import 0x340691c4c9cfde2764a3ed46e48d644a/PROOF.bend as WP
-import 0x340691c4c9cfde2764a3ed46e48d644a/nat.bend as N
+import 0xb13667d52aa56e002b4d09883d7fce3e/LAWS.bend as WL
+import 0xb13667d52aa56e002b4d09883d7fce3e/PROOF.bend as WP
+import 0xb13667d52aa56e002b4d09883d7fce3e/nat.bend as N
 ```
 
 or from a checkout, `import ../wordlib/LAWS.bend as WL` and so on. Then:
