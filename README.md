@@ -9,7 +9,8 @@ steps, and tests that catch a false law before you spend time proving it.
 
 Today: 44 laws on machine words (`Word(n)` at every width, and `U32`), the
 bridge from machine arithmetic to `Nat`, and `ac`, a prover for sums.
-Every law is also property-tested by bendcheck's `lawcheck`, a companion
+Every law is also property-tested by
+[bendcheck](https://github.com/Yazington/bendcheck)'s `lawcheck`, a companion
 library, so a wrong law fails with a counterexample in seconds instead of
 stalling a proof.
 
