@@ -3,6 +3,7 @@
 # lists once; parameters that only steer the statement are erased (-).
 
 import Base
+import ./count.bend as C
 
 # Append
 # ------
@@ -142,3 +143,74 @@ law length_replicate:
   for n: Nat
   for +x: A
   {List.length(&2, A, List.replicate(A, n, x)) == n : Nat}
+
+# Sorting (U32, by <=)
+# --------------------
+# count(Some{x}, xs) counts the copies of x; count(None{}, xs) counts all.
+
+# LAW: counts add under append
+law count_append:
+  for +m: Maybe<&2, U32>
+  for +xs: +List<U32>
+  for +ys: +List<U32>
+  {C.count(m, List.append(&2, U32, xs, ys)) == Nat.add(C.count(m, xs), C.count(m, ys)) : Nat}
+
+# LAW: reverse's loop moves every element, keeping counts
+law count_reverse_go:
+  for +m: Maybe<&2, U32>
+  for +xs: +List<U32>
+  for +acc: +List<U32>
+  {C.count(m, List.reverse.go(&2, U32, xs, acc)) == Nat.add(C.count(m, xs), C.count(m, acc)) : Nat}
+
+# LAW: a merge keeps the counts of its accumulator and inputs, however
+# much fuel it has
+law merge_count:
+  for +m: Maybe<&2, U32>
+  for +fuel: Nat
+  for +acc: +List<U32>
+  for +xs: +List<U32>
+  for +ys: +List<U32>
+  {C.count(m, List.merge.go(~U32, ~U32.is_le, fuel, (acc, xs, ys))) == Nat.add(C.count(m, acc), Nat.add(C.count(m, xs), C.count(m, ys))) : Nat}
+
+# LAW: a merge pass keeps the counts of all runs together
+law pass_count:
+  for +m: Maybe<&2, U32>
+  for +n: Nat
+  for +runs: List<&2, List<&2, U32>>
+  {C.count(m, List.concat(&2, U32, List.sort.pass(~U32, ~U32.is_le, n, runs))) == C.count(m, List.concat(&2, U32, runs)) : Nat}
+
+# LAW: the pass loop keeps the counts too
+law sort_go_count:
+  for +m: Maybe<&2, U32>
+  for +fuel: Nat
+  for +n: Nat
+  for +runs: List<&2, List<&2, U32>>
+  {C.count(m, List.sort.go(~U32, ~U32.is_le, fuel, n, runs)) == C.count(m, List.concat(&2, U32, runs)) : Nat}
+
+# LAW: splitting into runs and flattening gives the list back
+law sort_runs:
+  for -A: Data
+  for xs: List<&2, A>
+  {List.concat(&2, A, List.sort.runs(A, xs)) == xs : List<&2, A>}
+
+# LAW: counting everything is the length
+law count_all:
+  for +xs: +List<U32>
+  {C.count(None{}, xs) == List.length(&2, U32, xs) : Nat}
+
+# LAW: sorting keeps every count
+law sort_count:
+  for +m: Maybe<&2, U32>
+  for +xs: +List<U32>
+  {C.count(m, C.sort(xs)) == C.count(m, xs) : Nat}
+
+# LAW: sort is a permutation: each value occurs as often after as before
+law sort_perm:
+  for +x: U32
+  for +xs: +List<U32>
+  {C.count(Some{x}, C.sort(xs)) == C.count(Some{x}, xs) : Nat}
+
+# LAW: sort keeps the length
+law sort_length:
+  for +xs: +List<U32>
+  {List.length(&2, U32, C.sort(xs)) == List.length(&2, U32, xs) : Nat}

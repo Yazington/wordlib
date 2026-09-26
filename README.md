@@ -7,9 +7,9 @@ Bend promises code that is proved correct. wordlib is the library that makes
 that cheap: laws you import instead of re-proving, a prover for the tedious
 steps, and tests that catch a false law before you spend time proving it.
 
-Today: 60 laws. 44 on machine words (`Word(n)` at every width, and `U32`),
-with the bridge from machine arithmetic to `Nat`; 16 on lists, for any
-element type; and `ac`, a prover for sums.
+Today: 70 laws. 44 on machine words (`Word(n)` at every width, and `U32`),
+with the bridge from machine arithmetic to `Nat`; 26 on lists, including
+that Base's merge sort is a permutation; and `ac`, a prover for sums.
 Every law is also property-tested by
 [bendcheck](https://github.com/Yazington/bendcheck)'s `lawcheck`, a companion
 library, so a wrong law fails with a counterexample in seconds instead of
@@ -27,7 +27,7 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 | `nat.bend` | `Nat` lemmas: add algebra, cancellation, injectivity, parity, `le_sub` |
 | `mul.bend` | `Nat.mul` lemmas: distributivity, associativity, commutativity, doubling |
 | `ac.bend` | `ac`: a reflective prover for sums (see below) |
-| `list/` | laws of Base's `List` functions (16 laws, own `LAWS.bend`/`PROOF.bend`) |
+| `list/` | laws of Base's `List` functions (26 laws, own `LAWS.bend`/`PROOF.bend`); `count.bend` (counting, `sorted`, the U32 `sort`); `CONJECTURES.bend` (tested, not yet proved) |
 | `examples/withdraw/` | a U32 program whose safety is proved with wordlib |
 | `tools/` | proof generators and the U32 differential tester |
 | `tests/` | ac tests and mutation tests |
@@ -74,6 +74,24 @@ Built against Bend 2.0.28. `./check.sh` runs every check.
 | `length_take`, `length_drop` | `min(n, length xs)` and `length xs - n` elements |
 | `length_set`, `get_set` | `set` keeps the length; `get(set(xs, n, x), n) == Some x` when `n < length xs` |
 | `length_zip`, `length_range`, `length_replicate` | `min` of the lengths; `n`; `n` |
+
+**Sorting** (Base's `List.sort` on `U32` by `<=`, a bottom-up merge sort with
+fuel):
+
+| Law | Statement |
+|---|---|
+| `sort_perm` | `count(x, sort xs) == count(x, xs)` for every `x`: sort is a permutation |
+| `sort_length` | `length(sort xs) == length xs` |
+| `merge_count`, `pass_count`, `sort_go_count`, `sort_runs`, `sort_count` | each stage keeps the counts |
+| `count_append`, `count_reverse_go`, `count_all` | the counting lemmas |
+
+The permutation proof holds whatever the fuel does: a merge step only moves
+an element from an input to the accumulator. Since the next state depends on
+a comparison the proof cannot evaluate, it builds the induction hypothesis
+for both outcomes and lets the comparison pick. That the result is *sorted*
+needs the fuel to suffice and is still a conjecture: `list/CONJECTURES.bend`
+states it (with idempotence, and sorting a sorted list), and `lawcheck` tests
+it on every run.
 
 A list of arbitrary elements is affine: a proof may use it once. So the
 proofs never call two lemmas on the same list; helpers carry the second use
@@ -128,9 +146,9 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
 1. **The proof gates**: `bend PROOF.bend`, `bend list/PROOF.bend` and the
    example's `PROOF.bend` print "All terms check." (well under a second).
 2. **ac tests**: true identities check; a false one is rejected.
-3. **Mutation tests** (`tests/mutants.py`): 38 planted bugs in laws,
-   definitions, the `ac` normalizer, `Nat` lemmas, list laws and the example
-   program.
+3. **Mutation tests** (`tests/mutants.py`): 42 planted bugs in laws,
+   definitions, the `ac` normalizer, `Nat` lemmas, list and sort laws, and the
+   example program.
    Every one must make the checker fail. A surviving mutant means a proof is
    weaker than it looks.
 4. **Differential test** (`tools/diff_u32.py`): Bend compiles U32 ops to
@@ -148,7 +166,8 @@ false identity fails with the two count vectors, e.g. `[1n, 1n]` vs `[2n]`.
    laws before anyone proves them. Across widths 1 to 16 the 44 word laws give
    157 properties: 153 pass and 4 give up, because their preconditions (two
    random words with the same value, a 16-bit product that fits) almost never
-   hold. The 16 list laws, tested at `U32` elements, all pass.
+   hold. The 26 list laws, tested at `U32` elements, all pass, and so do the
+   3 sorting conjectures.
 
 ## Notes on Bend 2.0.28
 

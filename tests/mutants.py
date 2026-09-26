@@ -104,6 +104,16 @@ MUTANTS = [
      "{List.length(&2, Nat, List.range(n)) == n : Nat}", "{List.length(&2, Nat, List.range(n)) == 1n+n : Nat}"),
     ("list: append_nil on the left of a cons", "list/LAWS.bend",
      "{List.append(a, A, xs, Nil{}) == xs : List<a, A>}", "{List.append(a, A, xs, Nil{}) == List.reverse(a, A, xs) : List<a, A>}"),
+    ("sort: merge_count forgets the accumulator", "list/LAWS.bend",
+     "== Nat.add(C.count(m, acc), Nat.add(C.count(m, xs), C.count(m, ys))) : Nat}",
+     "== Nat.add(C.count(m, xs), C.count(m, ys)) : Nat}"),
+    ("sort: counting everything counts one extra", "list/count.bend",
+     "    case None{}:\n      1n\n", "    case None{}:\n      2n\n"),
+    ("sort: sort_perm compares with another value", "list/LAWS.bend",
+     "{C.count(Some{x}, C.sort(xs)) == C.count(Some{x}, xs) : Nat}",
+     "{C.count(Some{x}, C.sort(xs)) == C.count(Some{0}, xs) : Nat}"),
+    ("sort: the U32 sort sorts by >=", "list/count.bend",
+     "  List.sort(~U32, ~U32.is_le, xs)", "  List.sort(~U32, ~U32.is_ge, xs)"),
 ]
 
 def check(d):
